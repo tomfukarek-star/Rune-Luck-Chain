@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Rune Chain</title>
+<style>
+  :root{
+    --bg:#0e0f13; --panel:#171922; --panel2:#1e212c; --line:#2b2f3d;
+    --ink:#e8e6df; --dim:#8b8f9e; --gold:#d9b26a; --blue:#6f9fd8; --green:#7fbf8a; --red:#c96a6a; --purple:#a98bd4;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+  body{min-height:100vh;display:flex;justify-content:center;}
+  .wrap{width:100%;max-width:560px;padding:12px 12px 28px;}
+  @media (max-height:520px){
+    body{min-height:0;}
+    .wrap{padding-bottom:16px;}
+    .slot{height:70px;}
+    .slot canvas{max-width:70px;max-height:70px;}
+    .resultbox{height:44px;}
+    .tabs{margin:8px 0 6px;}
+    .tab{height:34px;}
+    .arena{padding:8px;}
+  }
+  body{overflow-x:hidden;}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px;}
+  h1{font-size:17px;margin:0;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:600;}
+  .cur{display:flex;gap:10px;font-size:13px;font-variant-numeric:tabular-nums;flex-wrap:wrap;justify-content:flex-end;}
+  .cur b{color:var(--gold);font-weight:600;}
+  .cur .dia b{color:var(--blue);}
+  .cur .roll-counter,.cur .save-status{flex-basis:100%;text-align:right;font-size:11px;}
+  .cur .roll-counter{color:var(--dim);}
+  .cur .roll-counter b{color:var(--purple);}
+  .cur .save-status{color:var(--green);font-size:10px;}
+  .cur .save-status.error{color:var(--red);}
+  .save-tools{display:flex;gap:7px;margin:0 0 9px;}
+  .save-tools button{height:30px;padding:0 10px;font-size:10px;letter-spacing:.06em;color:var(--dim);}
+
+  .arena{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;}
+  .chains{display:flex;gap:10px;}
+  .chain{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+    padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .chain .lbl{font-size:10px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;}
+  .slot{width:100%;height:110px;max-height:150px;display:flex;align-items:center;justify-content:center;}
+  .slot canvas{max-width:110px;max-height:110px;}
+  .slot canvas{width:100%;height:100%;display:block;}
+  .chain .rname{font-size:12px;color:var(--dim);min-height:15px;}
+  .chain .rname.on{color:var(--ink);}
+
+  .resultbox{height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    margin-top:10px;border-top:1px solid var(--line);padding-top:8px;overflow:hidden;}
+  .resultbox .main{font-size:14px;line-height:1.35;text-align:center;}
+  .resultbox .sub{font-size:11px;color:var(--dim);margin-top:2px;text-align:center;}
+  .gain{color:var(--gold);font-weight:600;}
+  .gaind{color:var(--blue);font-weight:600;}
+  .sec{color:var(--purple);font-weight:600;}
+
+  .btnrow{display:flex;gap:8px;margin-top:10px;}
+  button{font:inherit;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+    color:var(--ink);padding:0 12px;height:48px;cursor:pointer;touch-action:manipulation;}
+  button:active{transform:translateY(1px);}
+  button:disabled{opacity:.45;cursor:default;}
+  #roll{flex:1;background:#2a2418;border-color:#4a3d22;color:var(--gold);font-weight:600;letter-spacing:.1em;font-size:14px;}
+  #auto{min-width:96px;font-size:12px;letter-spacing:.06em;}
+  #auto.on{background:#1b2a20;border-color:#2f4a38;color:var(--green);}
+
+  .tabs{display:flex;gap:6px;margin:14px 0 8px;}
+  .tab{flex:1;height:40px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);}
+  .tab.active{background:#232736;color:var(--ink);border-color:#3a4056;}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;}
+  .note{font-size:11px;color:var(--dim);line-height:1.5;margin:0 0 8px;}
+  .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;}
+  .cell{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 4px;
+    display:flex;flex-direction:column;align-items:center;gap:2px;min-height:74px;justify-content:center;}
+  .cell.locked{opacity:.42;}
+  .cell .num{font-size:10px;color:var(--dim);letter-spacing:.06em;}
+  .cell .pct{font-size:11px;color:var(--ink);font-variant-numeric:tabular-nums;text-align:center;line-height:1.2;}
+  .cell.boost{border-color:#5a4a26;background:#221d13;}
+  .cell.boost .num{color:var(--gold);}
+  .cell canvas{width:34px;height:34px;display:block;}
+
+  .shop{display:flex;flex-direction:column;gap:8px;}
+  .row{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 10px;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .row .info{flex:1 1 140px;}
+  .row button,.row .max{flex:0 0 auto;}
+  .row .info{flex:1;min-width:0;}
+  .row .t{font-size:13px;margin-bottom:2px;}
+  .row .d{font-size:11px;color:var(--dim);line-height:1.4;}
+  .row button{height:40px;min-width:88px;font-size:12px;}
+  .row .max{font-size:11px;color:var(--green);min-width:88px;text-align:center;}
+  .hidden{display:none;}
+  @media (max-width:360px){ .grid{grid-template-columns:repeat(3,1fr);} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Rune Chain</h1>
+    <div class="cur">
+      <span>Coins <b id="coins">0</b></span>
+      <span class="dia">Diamonds <b id="dias">0</b></span>
+      <span class="roll-counter">Secret roll counter <b id="secretRolls">0</b></span>
+      <span class="save-status" id="saveStatus" role="status">Saving enabled</span>
+    </div>
+  </header>
+
+  <div class="save-tools">
+    <button type="button" id="exportSave">EXPORT SAVE</button>
+    <button type="button" id="importSave">IMPORT SAVE</button>
+    <input type="file" id="saveFileInput" accept=".json,application/json" hidden>
+  </div>
+
+  <div class="arena">
+    <div class="chains" id="chains"></div>
+    <div class="resultbox">
+      <div class="main" id="resMain">Press ROLL to begin.</div>
+      <div class="sub" id="resSub"></div>
+    </div>
+    <div class="btnrow">
+      <button id="roll">ROLL</button>
+      <button id="auto">AUTO ROLL</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="index">Index</button>
+    <button class="tab" data-tab="secrets">Secrets</button>
+    <button class="tab" data-tab="shop">Upgrades</button>
+  </div>
+
+  <div class="panel" id="panelIndex">
+    <p class="note">Shown is the <b>total</b> chance a single roll reaches that rune (all steps multiplied together). Indexing a rune adds +1 percentage point to its own chance and every lower rune. ★ marks today's boosted rune.</p>
+    <div class="grid" id="indexGrid"></div>
+  </div>
+
+  <div class="panel hidden" id="panelSecrets">
+    <p class="note">Secret runes roll on <b>every</b> step of a chain. A hit gives the secret plus the rune you landed on. Each secret you index grants +1% secret luck.</p>
+    <div class="grid" id="secretGrid"></div>
+  </div>
+
+  <div class="panel hidden" id="panelShop">
+    <div class="shop" id="shopList"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------- constants ---------------- */
+var BASE_CHANCE = 0.10;          // per-step chance for every rune tier
+var UPGRADE_STEP = 0.001;        // +0.1% per coin upgrade
+var UPGRADE_MAX = 0.04;          // +4% cap from coin upgrades
+var UNLOCK_BONUS = 0.01;         // +1% permanent per indexed rune
+var BOOST_BONUS = 0.01;          // +1% for the daily boosted rune
+var UPGRADE_COST_BASE = 5;       // first upgrade cost
+var UPGRADE_COST_GROWTH = 1.18;  // each upgrade costs more
+var RUNE1_MAX_UPGRADES = 40;     // 40 * 0.1% = 4%
+
+var DIAMOND_UPGRADE_STEP = 0.0025; // +0.25% rune chance per diamond upgrade
+var DIAMOND_UPGRADE_MAX = 0.03;    // +3% cap
+var DIAMOND_UPGRADE_COST_BASE = 4;
+var DIAMOND_UPGRADE_COST_GROWTH = 1.5;
+var DIAMOND_UPGRADE_TIERS = 12;    // 12 * 0.25% = 3%
+
+var SECRET_LUCK_STEP = 0.05;       // +5% secret luck per diamond tier
+var SECRET_LUCK_MAX = 0.50;        // +50% cap
+var SECRET_LUCK_COST_BASE = 6;
+var SECRET_LUCK_COST_GROWTH = 1.6;
+var SECRET_LUCK_TIERS = 10;        // 10 * 5% = 50%
+var SECRET_INDEX_BONUS = 0.01;     // +1% secret luck per indexed secret
+
+var DOUBLE_ROLL_COST = 250;        // one-time diamond unlock
+var AUTO_ROLL_COST = 40;           // one-time coin unlock
+var AUTO_ROLL_INTERVAL = 480;      // ms between automatic rolls
+
+/* coin value per rune tier: rune 1 = 3 coins, growing ~1.55x per tier */
+function runeCoins(tier){
+  return Math.max(6, Math.round(6 * Math.pow(1.6, tier - 1)));
+}
+
+/* diamonds from rune 5 upward; rune 5 is a trickle */
+function runeDiamonds(tier){
+  if(tier < 5) return 0;
+  var d = Math.pow(1.7, tier - 5);      // rune 5 = 1, rune 6 = 1.7 ...
+  return Math.max(1, Math.round(d));
+}
+
+/* secrets: chance per single roll, diamonds paid */
+var SECRETS = [
+  {id:"s1", name:"Ember Sigil",   oneIn:10000,   diamonds:3},
+  {id:"s2", name:"Frost Sigil",   oneIn:25000,   diamonds:6},
+  {id:"s3", name:"Void Sigil",    oneIn:60000,   diamonds:12},
+  {id:"s4", name:"Solar Sigil",   oneIn:150000,  diamonds:25},
+  {id:"s5", name:"Abyss Sigil",   oneIn:400000,  diamonds:55},
+  {id:"s6", name:"Astral Sigil",  oneIn:1000000, diamonds:120},
+  {id:"s7", name:"Eternal Sigil", oneIn:2500000, diamonds:260},
+  {id:"s8", name:"First Sigil",   oneIn:6000000, diamonds:600}
+];
+
+var RUNE_NAMES = ["","Rune I","Rune II","Rune III","Rune IV","Rune V","Rune VI","Rune VII","Rune VIII","Rune IX","Rune X",
+  "Rune XI","Rune XII","Rune XIII","Rune XIV","Rune XV","Rune XVI","Rune XVII","Rune XVIII","Rune XIX","Rune XX"];
+
+/* ---------------- state ---------------- */
+var S = {
+  coins: 0,
+  diamonds: 0,
+  secretRolls: 0,      // counts every individual chain step, including the failed step
+  upgrades: {},        // tier -> number of coin upgrades bought
+  unlocked: {},        // tier -> true when indexed
+  secrets: {},         // secret id -> true when indexed
+  secretLuckTiers: 0,
+  scalingLuck: false,
+  runeDiamondTiers: 0,
+  doubleRoll: false,
+  autoRoll: false,
+  extraRunes: {},      // tiers above 20 that were obtained
+  bestTier: 0,
+  rolling: false,
+  autoTimer: null,
+  autoOn: false
+};
+
+/* ---------------- local save system (same structure as Coin Idle) ---------------- */
+var SAVE_KEY = "runeChainSave_v1";
+var saveBlocked = false;
+
+function saveGame(){
+  if(saveBlocked) return false;
+  try{
+    // Coin Idle's approach: save the complete game state directly.
+    localStorage.setItem(SAVE_KEY, JSON.stringify(S));
+    var status = document.getElementById("saveStatus");
+    if(status){
+      status.textContent = "Saved";
+      status.classList.remove("error");
+    }
+    return true;
+  }catch(err){
+    var status = document.getElementById("saveStatus");
+    if(status){
+      status.textContent = "SAVE FAILED";
+      status.classList.add("error");
+    }
+    return false;
+  }
+}
+
+function loadGame(){
+  try{
+    var raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return;
+    var data = JSON.parse(raw);
+
+    // Read both the previous Rune Chain format and the direct-S format.
+    if(data && data.version === 1 && data.upgrades && data.unlocked){
+      S.coins = Math.max(0, data.coins || 0);
+      S.diamonds = Math.max(0, data.diamonds || 0);
+      S.secretRolls = Number.isSafeInteger(data.secretRolls) ? Math.max(0, data.secretRolls) : 0;
+      S.upgrades = data.upgrades || {};
+      S.unlocked = data.unlocked || {};
+      S.secrets = data.secrets || {};
+      S.secretLuckTiers = Number.isFinite(data.secretLuckTiers) ? Math.max(0, data.secretLuckTiers) : 0;
+      S.scalingLuck = data.scalingLuck === true;
+      S.runeDiamondTiers = Number.isFinite(data.runeDiamondTiers) ? Math.max(0, data.runeDiamondTiers) : 0;
+      S.doubleRoll = data.doubleRoll === true;
+      S.autoRoll = data.autoRoll === true;
+      S.extraRunes = data.extraRunes && typeof data.extraRunes === "object" ? data.extraRunes : {};
+      S.bestTier = Number.isFinite(data.bestTier) ? Math.max(0, data.bestTier) : 0;
+      return;
+    }
+
+    if(!data || typeof data !== "object" ||
+       !Number.isFinite(data.coins) || !Number.isFinite(data.diamonds)){
+      saveBlocked = true;
+      var status = document.getElementById("saveStatus");
+      if(status){
+        status.textContent = "SAVE READ ERROR — NOT OVERWRITTEN";
+        status.classList.add("error");
+      }
+      return;
+    }
+
+    // Restore saved properties into the game's existing defaults.
+    S.coins = Math.max(0, data.coins);
+    S.diamonds = Math.max(0, data.diamonds);
+    S.secretRolls = Number.isSafeInteger(data.secretRolls) ? Math.max(0, data.secretRolls) : 0;
+    S.upgrades = data.upgrades && typeof data.upgrades === "object" ? data.upgrades : {};
+    S.unlocked = data.unlocked && typeof data.unlocked === "object" ? data.unlocked : {};
+    S.secrets = data.secrets && typeof data.secrets === "object" ? data.secrets : {};
+    S.secretLuckTiers = Number.isFinite(data.secretLuckTiers) ? Math.max(0, data.secretLuckTiers) : 0;
+    S.scalingLuck = data.scalingLuck === true;
+    S.runeDiamondTiers = Number.isFinite(data.runeDiamondTiers) ? Math.max(0, data.runeDiamondTiers) : 0;
+    S.doubleRoll = data.doubleRoll === true;
+    S.autoRoll = data.autoRoll === true;
+    S.extraRunes = data.extraRunes && typeof data.extraRunes === "object" ? data.extraRunes : {};
+    S.bestTier = Number.isFinite(data.bestTier) ? Math.max(0, data.bestTier) : 0;
+  }catch(err){
+    saveBlocked = true;
+    var status = document.getElementById("saveStatus");
+    if(status){
+      status.textContent = "SAVE READ ERROR — NOT OVERWRITTEN";
+      status.classList.add("error");
+    }
+  }
+}
+
+
+/* ---------------- save export ---------------- */
+function exportSave(){
+  // Save the latest state first, then export only persistent game data.
+  saveGame();
+
+  var backup = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    coins: S.coins,
+    diamonds: S.diamonds,
+    secretRolls: S.secretRolls,
+    upgrades: S.upgrades,
+    unlocked: S.unlocked,
+    secrets: S.secrets,
+    secretLuckTiers: S.secretLuckTiers,
+    scalingLuck: S.scalingLuck,
+    runeDiamondTiers: S.runeDiamondTiers,
+    doubleRoll: S.doubleRoll,
+    autoRoll: S.autoRoll,
+    extraRunes: S.extraRunes,
+    bestTier: S.bestTier
+  };
+
+  var json = JSON.stringify(backup, null, 2);
+  var status = document.getElementById("saveStatus");
+
+  try{
+    var blob = new Blob([json], {type:"application/json"});
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.href = url;
+    link.download = "rune-chain-save.json";
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+    if(status){
+      status.textContent = "SAVE EXPORT STARTED";
+      status.classList.remove("error");
+    }
+  }catch(err){
+    // If Android blocks the file download, show the save text so it can be copied.
+    window.prompt("Copy this Rune Chain backup and keep it somewhere safe:", json);
+    if(status){
+      status.textContent = "COPY BACKUP TEXT";
+      status.classList.remove("error");
+    }
+  }
+}
+
+// Same save cadence as Coin Idle: periodic saves plus background/close saves.
+window.addEventListener("pagehide", saveGame);
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState === "hidden") saveGame();
+});
+setInterval(saveGame, 5000);
+
+/* ---------------- helpers ---------------- */
+function todaySeed(){
+  var d = new Date();
+  return d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate();
+}
+function boostedTier(){
+  var seed = todaySeed();
+  var h = (seed * 2654435761) % 4294967296;
+  return (h % 5) + 1;
+}
+var BOOSTED = boostedTier();
+
+function upgradeBonus(tier){
+  var n = S.upgrades[tier] || 0;
+  return n * UPGRADE_STEP;
+}
+function diamondBonus(tier){
+  if(tier > 10) return 0;
+  return S.runeDiamondTiers * DIAMOND_UPGRADE_STEP;
+}
+/* Each indexed rune grants +1 percentage point to itself and every lower tier. */
+function indexBonus(tier){
+  var bonus = 0;
+  Object.keys(S.unlocked).forEach(function(key){
+    var indexedTier = parseInt(key, 10);
+    if(S.unlocked[key] && indexedTier >= tier) bonus += UNLOCK_BONUS;
+  });
+  return bonus;
+}
+/* per-step chance to advance INTO this tier */
+function stepChance(tier){
+  var c = BASE_CHANCE + upgradeBonus(tier) + diamondBonus(tier) + indexBonus(tier);
+  if(tier === BOOSTED) c += BOOST_BONUS;
+  return Math.min(c, 1);
+}
+/* total chance a roll reaches this tier */
+function reachChance(tier){
+  var p = 1;
+  for(var t=1;t<=tier;t++) p *= stepChance(t);
+  return p;
+}
+function rune0Chance(){ return 1 - stepChance(1); }
+
+function fmtPct(p){
+  if(p >= 0.01) return (p*100).toFixed(2).replace(/\.?0+$/,"") + "%";
+  if(p >= 0.0001) return (p*100).toFixed(3).replace(/\.?0+$/,"") + "%";
+  var oneIn = 1/p;
+  if(oneIn >= 1e24) return "1 in " + (oneIn/1e24).toFixed(1).replace(/\.0$/,"") + "Sp";
+  if(oneIn >= 1e21) return "1 in " + (oneIn/1e21).toFixed(1).replace(/\.0$/,"") + "Sx";
+  if(oneIn >= 1e18) return "1 in " + (oneIn/1e18).toFixed(1).replace(/\.0$/,"") + "Qn";
+  if(oneIn >= 1e15) return "1 in " + (oneIn/1e15).toFixed(1).replace(/\.0$/,"") + "Qd";
+  if(oneIn >= 1e12) return "1 in " + (oneIn/1e12).toFixed(1).replace(/\.0$/,"") + "T";
+  if(oneIn >= 1e9) return "1 in " + (oneIn/1e9).toFixed(1).replace(/\.0$/,"") + "B";
+  if(oneIn >= 1e6) return "1 in " + (oneIn/1e6).toFixed(1).replace(/\.0$/,"") + "M";
+  if(oneIn >= 1e3) return "1 in " + (oneIn/1e3).toFixed(1).replace(/\.0$/,"") + "K";
+  return "1 in " + Math.round(oneIn);
+}
+
+
+function fmtOneInChance(p){
+  if(!(p > 0)) return "—";
+  var oneIn = 1/p;
+  function shortNumber(n){
+    return n.toFixed(2).replace(/\\.?0+$/,"");
+  }
+  if(oneIn >= 1e24) return "1 in " + shortNumber(oneIn/1e24) + "Sp";
+  if(oneIn >= 1e21) return "1 in " + shortNumber(oneIn/1e21) + "Sx";
+  if(oneIn >= 1e18) return "1 in " + shortNumber(oneIn/1e18) + "Qn";
+  if(oneIn >= 1e15) return "1 in " + shortNumber(oneIn/1e15) + "Qd";
+  if(oneIn >= 1e12) return "1 in " + shortNumber(oneIn/1e12) + "T";
+  if(oneIn >= 1e9) return "1 in " + shortNumber(oneIn/1e9) + "B";
+  if(oneIn >= 1e6) return "1 in " + shortNumber(oneIn/1e6) + "M";
+  if(oneIn >= 1e3) return "1 in " + shortNumber(oneIn/1e3) + "K";
+  return "1 in " + Math.round(oneIn);
+}
+
+function secretLuck(){
+  return 1 + S.secretLuckTiers * SECRET_LUCK_STEP + Object.keys(S.secrets).length * SECRET_INDEX_BONUS;
+}
+function secretChance(sec, chainBonus){
+  return Math.min(1, (1/sec.oneIn) * (secretLuck() + (chainBonus || 0)));
+}
+
+function coinUpgradeCost(tier){
+  var n = S.upgrades[tier] || 0;
+  return Math.round(UPGRADE_COST_BASE * Math.pow(UPGRADE_COST_GROWTH, n));
+}
+function runeDiamondCost(){
+  return Math.round(DIAMOND_UPGRADE_COST_BASE * Math.pow(DIAMOND_UPGRADE_COST_GROWTH, S.runeDiamondTiers));
+}
+function secretLuckCost(){
+  return Math.round(SECRET_LUCK_COST_BASE * Math.pow(SECRET_LUCK_COST_GROWTH, S.secretLuckTiers));
+}
+
+/* ---------------- rune sigil drawing ---------------- */
+function drawSigil(canvas, tier, opts){
+  opts = opts || {};
+  var dpr = window.devicePixelRatio || 1;
+  var w = canvas.clientWidth || 60, h = canvas.clientHeight || 60;
+  if(canvas.width !== Math.round(w*dpr) || canvas.height !== Math.round(h*dpr)){
+    canvas.width = Math.round(w*dpr); canvas.height = Math.round(h*dpr);
+  }
+  var ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+  var cx = w/2, cy = h/2, R = Math.min(w,h)/2 - 2;
+  var dim = !!opts.locked;
+  var hue = (tier * 47) % 360;
+  var col = dim ? "#4a4e5c" : "hsl(" + hue + ",45%,62%)";
+  var col2 = dim ? "#3a3e4a" : "hsl(" + hue + ",40%,42%)";
+
+  // outer ring
+  ctx.beginPath();
+  ctx.arc(cx,cy,R*0.92,0,Math.PI*2);
+  ctx.lineWidth = Math.max(1.2, R*0.09);
+  ctx.strokeStyle = col;
+  ctx.stroke();
+
+  // inner ring
+  ctx.beginPath();
+  ctx.arc(cx,cy,R*0.62,0,Math.PI*2);
+  ctx.lineWidth = Math.max(1, R*0.05);
+  ctx.strokeStyle = col2;
+  ctx.stroke();
+
+  if(tier === 0){
+    // empty circle: a small dot
+    ctx.beginPath();
+    ctx.arc(cx,cy,R*0.16,0,Math.PI*2);
+    ctx.fillStyle = col2;
+    ctx.fill();
+    return;
+  }
+
+  var shape = (tier - 1) % 8;
+  var sides = 3 + ((tier - 1) % 6);
+  var rr = R*0.46;
+  ctx.beginPath();
+  if(shape === 0){ // triangle/polygon
+    for(var i=0;i<sides;i++){
+      var a = -Math.PI/2 + i*2*Math.PI/sides;
+      var x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+  } else if(shape === 1){ // square rotated
+    var s = rr*0.95;
+    ctx.moveTo(cx, cy-s); ctx.lineTo(cx+s, cy); ctx.lineTo(cx, cy+s); ctx.lineTo(cx-s, cy); ctx.closePath();
+  } else if(shape === 2){ // star
+    var pts = 5 + (tier % 3);
+    for(var j=0;j<pts*2;j++){
+      var ang = -Math.PI/2 + j*Math.PI/pts;
+      var rad = (j%2===0) ? rr : rr*0.45;
+      var xx = cx + Math.cos(ang)*rad, yy = cy + Math.sin(ang)*rad;
+      if(j===0) ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy);
+    }
+    ctx.closePath();
+  } else if(shape === 3){ // hexagon outline pair
+    for(var k=0;k<6;k++){
+      var a2 = -Math.PI/2 + k*Math.PI/3;
+      var x2 = cx + Math.cos(a2)*rr, y2 = cy + Math.sin(a2)*rr;
+      if(k===0) ctx.moveTo(x2,y2); else ctx.lineTo(x2,y2);
+    }
+    ctx.closePath();
+  } else if(shape === 4){ // circle with cross
+    ctx.arc(cx,cy,rr*0.8,0,Math.PI*2);
+  } else if(shape === 5){ // diamond with inner diamond
+    var q = rr*0.9;
+    ctx.moveTo(cx, cy-q); ctx.lineTo(cx+q, cy); ctx.lineTo(cx, cy+q); ctx.lineTo(cx-q, cy); ctx.closePath();
+  } else if(shape === 6){ // crescent-ish arc
+    ctx.arc(cx,cy,rr*0.85,0.5,Math.PI*2-0.5);
+    ctx.closePath();
+  } else { // spiral of dots
+    var n = 6 + (tier % 5);
+    for(var m=0;m<n;m++){
+      var ang2 = m*2*Math.PI/n;
+      var rad2 = rr*(0.35 + 0.5*(m%2));
+      ctx.moveTo(cx+Math.cos(ang2)*rad2 + R*0.05, cy+Math.sin(ang2)*rad2);
+      ctx.arc(cx+Math.cos(ang2)*rad2, cy+Math.sin(ang2)*rad2, R*0.05, 0, Math.PI*2);
+    }
+  }
+  ctx.fillStyle = dim ? "rgba(74,78,92,.35)" : "hsla(" + hue + ",45%,62%,.28)";
+  ctx.fill();
+  ctx.lineWidth = Math.max(1.1, R*0.06);
+  ctx.strokeStyle = col;
+  ctx.stroke();
+
+  // center dot
+  ctx.beginPath();
+  ctx.arc(cx,cy,R*0.09,0,Math.PI*2);
+  ctx.fillStyle = col;
+  ctx.fill();
+}
+
+/* ---------------- chain rendering ---------------- */
+var chainEls = [];
+function buildChains(){
+  var wrap = document.getElementById("chains");
+  wrap.innerHTML = "";
+  chainEls = [];
+  var lanes = S.doubleRoll ? 2 : 1;
+  for(var i=0;i<lanes;i++){
+    var d = document.createElement("div");
+    d.className = "chain";
+    d.innerHTML = '<div class="lbl">Chain ' + (i+1) + '</div>' +
+      '<div class="slot"><canvas></canvas></div>' +
+      '<div class="rname">—</div>';
+    wrap.appendChild(d);
+    var cv = d.querySelector("canvas");
+    chainEls.push({root:d, canvas:cv, name:d.querySelector(".rname"), tier:0});
+    drawSigil(cv, 0, {locked:true});
+  }
+}
+
+function setLane(i, tier, animate){
+  var lane = chainEls[i];
+  if(!lane) return;
+  lane.tier = tier;
+  drawSigil(lane.canvas, tier, {locked: tier===0});
+  lane.name.textContent = tier === 0 ? "—" : (RUNE_NAMES[tier] || ("Rune " + tier));
+  lane.name.className = "rname" + (tier>0 ? " on" : "");
+  if(animate){
+    lane.canvas.style.transition = "none";
+    lane.canvas.style.transform = "scale(1.12)";
+    requestAnimationFrame(function(){
+      lane.canvas.style.transition = "transform .18s ease-out";
+      lane.canvas.style.transform = "scale(1)";
+    });
+  }
+}
+
+/* ---------------- rolling ---------------- */
+function rollOnce(laneIndex, cb){
+  var tier = 0;
+  var secretsFound = [];
+  var steps = 0;
+
+  function step(){
+    steps++;
+    S.secretRolls++;
+    // secret chance on every single step
+    for(var s=0;s<SECRETS.length;s++){
+      var sec = SECRETS[s];
+      var chainBonus = S.scalingLuck ? Math.max(0, steps - 1) : 0;
+      if(Math.random() < secretChance(sec, chainBonus)){
+        secretsFound.push(sec);
+        S.secretRolls = 0;
+      }
+    }
+    saveGame();
+    var next = tier + 1;
+    if(Math.random() < stepChance(next)){
+      tier = next;
+      setLane(laneIndex, tier, true);
+      if(steps < 40) setTimeout(step, 110);
+      else finish();
+    } else {
+      finish();
+    }
+  }
+
+  function finish(){
+    var coins = tier > 0 ? runeCoins(tier) : 0;
+    var dias = tier > 0 ? runeDiamonds(tier) : 0;
+    var newRune = false, newSecrets = [];
+    if(tier > 0){
+      if(!S.unlocked[tier]){ S.unlocked[tier] = true; newRune = true; }
+      if(tier > 20) S.extraRunes[tier] = true;
+      if(tier > S.bestTier) S.bestTier = tier;
+    }
+    for(var i=0;i<secretsFound.length;i++){
+      var id = secretsFound[i].id;
+      if(!S.secrets[id]){ S.secrets[id] = true; newSecrets.push(secretsFound[i]); }
+      dias += secretsFound[i].diamonds;
+    }
+    S.coins += coins;
+    S.diamonds += dias;
+    saveGame();
+    cb({tier:tier, coins:coins, diamonds:dias, newRune:newRune, secrets:secretsFound, newSecrets:newSecrets});
+  }
+
+  setTimeout(step, 120);
+}
+
+function doRoll(){
+  if(S.rolling) return;
+  S.rolling = true;
+  document.getElementById("roll").disabled = true;
+  var lanes = chainEls.length;
+  var results = [];
+  var done = 0;
+  var main = document.getElementById("resMain");
+  var sub = document.getElementById("resSub");
+  main.textContent = "Rolling…";
+  sub.textContent = "";
+
+  for(var i=0;i<lanes;i++){
+    setLane(i, 0, false);
+  }
+
+  for(var l=0;l<lanes;l++){
+    (function(idx){
+      rollOnce(idx, function(r){
+        results[idx] = r;
+        done++;
+        if(done === lanes) showResults(results);
+      });
+    })(l);
+  }
+}
+
+function showResults(results){
+  var main = document.getElementById("resMain");
+  var sub = document.getElementById("resSub");
+  var parts = [], subs = [];
+  var totalCoins = 0, totalDias = 0, anyNew = false, anySecret = false;
+
+  for(var i=0;i<results.length;i++){
+    var r = results[i];
+    totalCoins += r.coins;
+    totalDias += r.diamonds;
+    if(r.tier === 0){
+      parts.push("Rune 0 — nothing");
+    } else {
+      parts.push((RUNE_NAMES[r.tier] || ("Rune "+r.tier)) + (r.newRune ? " ✦NEW" : ""));
+    }
+    if(r.newRune) anyNew = true;
+    if(r.secrets.length){
+      anySecret = true;
+      var names = [];
+      for(var s=0;s<r.secrets.length;s++) names.push(r.secrets[s].name);
+      subs.push("Secret: " + names.join(", "));
+    }
+  }
+
+  var html = parts.join("  ·  ");
+  if(totalCoins > 0) html += '  <span class="gain">+' + totalCoins + " coins</span>";
+  if(totalDias > 0) html += '  <span class="gaind">+' + totalDias + " diamonds</span>";
+  main.innerHTML = html;
+  sub.innerHTML = subs.length ? '<span class="sec">' + subs.join(" · ") + "</span>" : (anyNew ? "New entry added to the index." : "");
+
+  S.rolling = false;
+  document.getElementById("roll").disabled = false;
+  refreshAll();
+
+  if(S.autoOn){
+    clearTimeout(S.autoTimer);
+    S.autoTimer = setTimeout(function(){
+      if(S.autoOn) doRoll();
+    }, AUTO_ROLL_INTERVAL);
+  }
+}
+
+/* ---------------- index ---------------- */
+function renderIndex(){
+  var grid = document.getElementById("indexGrid");
+  grid.innerHTML = "";
+  var tiers = [];
+  for(var t=1;t<=20;t++) tiers.push(t);
+  Object.keys(S.extraRunes).forEach(function(k){
+    var n = parseInt(k,10);
+    if(n > 20 && tiers.indexOf(n) === -1) tiers.push(n);
+  });
+  tiers.sort(function(a,b){return a-b;});
+
+  for(var i=0;i<tiers.length;i++){
+    var tier = tiers[i];
+    var p = reachChance(tier);
+    var cell = document.createElement("div");
+    cell.className = "cell" + (tier === BOOSTED ? " boost" : "");
+    var cv = document.createElement("canvas");
+    cell.appendChild(cv);
+    var num = document.createElement("div");
+    num.className = "num";
+    num.textContent = (tier === BOOSTED ? "★ " : "") + (RUNE_NAMES[tier] || ("Rune "+tier)).replace("Rune ","");
+    var pct = document.createElement("div");
+    pct.className = "pct";
+    pct.textContent = fmtPct(p);
+    cell.appendChild(num);
+    cell.appendChild(pct);
+    grid.appendChild(cell);
+    drawSigil(cv, tier, {locked: !S.unlocked[tier]});
+  }
+}
+
+function renderSecrets(){
+  var grid = document.getElementById("secretGrid");
+  grid.innerHTML = "";
+  for(var i=0;i<SECRETS.length;i++){
+    var sec = SECRETS[i];
+    var owned = !!S.secrets[sec.id];
+    var cell = document.createElement("div");
+    cell.className = "cell" + (owned ? "" : " locked");
+    var cv = document.createElement("canvas");
+    cell.appendChild(cv);
+    var num = document.createElement("div");
+    num.className = "num";
+    num.textContent = owned ? sec.name.replace(" Sigil","") : "???";
+    var pct = document.createElement("div");
+    pct.className = "pct";
+    pct.textContent = fmtOneInChance(secretChance(sec));
+    cell.appendChild(num);
+    cell.appendChild(pct);
+    grid.appendChild(cell);
+    drawSigil(cv, owned ? (i*3+2) : 0, {locked: !owned});
+  }
+}
+
+/* ---------------- shop ---------------- */
+function renderShop(){
+  var list = document.getElementById("shopList");
+  list.innerHTML = "";
+
+  // coin upgrades for runes 1-5
+  for(var t=1;t<=5;t++){
+    (function(tier){
+      var n = S.upgrades[tier] || 0;
+      var maxed = n >= RUNE1_MAX_UPGRADES;
+      var cost = coinUpgradeCost(tier);
+      var row = document.createElement("div");
+      row.className = "row";
+      var info = document.createElement("div");
+      info.className = "info";
+      info.innerHTML = '<div class="t">' + (RUNE_NAMES[tier]) + ' chance</div>' +
+        '<div class="d">+' + (n*0.1).toFixed(1) + '% / +4% · now ' + (stepChance(tier)*100).toFixed(1) + '% per step</div>';
+      row.appendChild(info);
+      if(maxed){
+        var m = document.createElement("div");
+        m.className = "max";
+        m.textContent = "MAXED";
+        row.appendChild(m);
+      } else {
+        var b = document.createElement("button");
+        b.textContent = cost + " coins";
+        b.disabled = S.coins < cost;
+        b.onclick = function(){
+          if(S.coins < cost) return;
+          S.coins -= cost;
+          S.upgrades[tier] = n + 1;
+          refreshAll();
+        };
+        row.appendChild(b);
+      }
+      list.appendChild(row);
+    })(t);
+  }
+
+  // diamond: rune chance 1-10
+  (function(){
+    var maxed = S.runeDiamondTiers >= DIAMOND_UPGRADE_TIERS;
+    var cost = runeDiamondCost();
+    var row = document.createElement("div");
+    row.className = "row";
+    var info = document.createElement("div");
+    info.className = "info";
+    info.innerHTML = '<div class="t">Rune chance (I–X)</div>' +
+      '<div class="d">+' + (S.runeDiamondTiers*0.25).toFixed(2) + '% / +3% · applies to runes 1–10</div>';
+    row.appendChild(info);
+    if(maxed){
+      var m = document.createElement("div"); m.className="max"; m.textContent="MAXED"; row.appendChild(m);
+    } else {
+      var b = document.createElement("button");
+      b.textContent = cost + " ◆";
+      b.disabled = S.diamonds < cost;
+      b.onclick = function(){
+        if(S.diamonds < cost) return;
+        S.diamonds -= cost;
+        S.runeDiamondTiers++;
+        refreshAll();
+      };
+      row.appendChild(b);
+    }
+    list.appendChild(row);
+  })();
+
+  // diamond: secret luck
+  (function(){
+    var maxed = S.secretLuckTiers >= SECRET_LUCK_TIERS;
+    var cost = secretLuckCost();
+    var row = document.createElement("div");
+    row.className = "row";
+    var info = document.createElement("div");
+    info.className = "info";
+    info.innerHTML = '<div class="t">Secret luck</div>' +
+      '<div class="d">+' + (S.secretLuckTiers*5) + '% / +50% · all secrets ×' + secretLuck().toFixed(2) + '</div>';
+    row.appendChild(info);
+    if(maxed){
+      var m = document.createElement("div"); m.className="max"; m.textContent="MAXED"; row.appendChild(m);
+    } else {
+      var b = document.createElement("button");
+      b.textContent = cost + " ◆";
+      b.disabled = S.diamonds < cost;
+      b.onclick = function(){
+        if(S.diamonds < cost) return;
+        S.diamonds -= cost;
+        S.secretLuckTiers++;
+        refreshAll();
+      };
+      row.appendChild(b);
+    }
+    list.appendChild(row);
+  })();
+
+  // coin: scaling luck (one-time unlock)
+  (function(){
+    var row = document.createElement("div");
+    row.className = "row";
+    var info = document.createElement("div");
+    info.className = "info";
+    info.innerHTML = '<div class="t">Scaling luck</div>' +
+      '<div class="d">Each step after Rune I adds +1× secret luck for that chain. Resets on the next chain.</div>';
+    row.appendChild(info);
+    if(S.scalingLuck){
+      var m = document.createElement("div"); m.className="max"; m.textContent="OWNED"; row.appendChild(m);
+    } else {
+      var b = document.createElement("button");
+      b.textContent = "5,000 coins";
+      b.disabled = S.coins < 5000;
+      b.onclick = function(){
+        if(S.coins < 5000) return;
+        S.coins -= 5000;
+        S.scalingLuck = true;
+        refreshAll();
+      };
+      row.appendChild(b);
+    }
+    list.appendChild(row);
+  })();
+
+  // double roll
+  (function(){
+    var row = document.createElement("div");
+    row.className = "row";
+    var info = document.createElement("div");
+    info.className = "info";
+    info.innerHTML = '<div class="t">Double roll</div><div class="d">Two independent chains per roll — both pay coins and both index.</div>';
+    row.appendChild(info);
+    if(S.doubleRoll){
+      var m = document.createElement("div"); m.className="max"; m.textContent="OWNED"; row.appendChild(m);
+    } else {
+      var b = document.createElement("button");
+      b.textContent = DOUBLE_ROLL_COST + " ◆";
+      b.disabled = S.diamonds < DOUBLE_ROLL_COST;
+      b.onclick = function(){
+        if(S.diamonds < DOUBLE_ROLL_COST) return;
+        S.diamonds -= DOUBLE_ROLL_COST;
+        S.doubleRoll = true;
+        buildChains();
+        refreshAll();
+      };
+      row.appendChild(b);
+    }
+    list.appendChild(row);
+  })();
+
+  // auto roll
+  (function(){
+    var row = document.createElement("div");
+    row.className = "row";
+    var info = document.createElement("div");
+    info.className = "info";
+    info.innerHTML = '<div class="t">Auto roll</div><div class="d">Keeps rolling on its own. Toggle it with the AUTO ROLL button.</div>';
+    row.appendChild(info);
+    if(S.autoRoll){
+      var m = document.createElement("div"); m.className="max"; m.textContent="OWNED"; row.appendChild(m);
+    } else {
+      var b = document.createElement("button");
+      b.textContent = AUTO_ROLL_COST + " coins";
+      b.disabled = S.coins < AUTO_ROLL_COST;
+      b.onclick = function(){
+        if(S.coins < AUTO_ROLL_COST) return;
+        S.coins -= AUTO_ROLL_COST;
+        S.autoRoll = true;
+        refreshAll();
+      };
+      row.appendChild(b);
+    }
+    list.appendChild(row);
+  })();
+}
+
+/* ---------------- refresh ---------------- */
+function refreshAll(){
+  document.getElementById("coins").textContent = S.coins;
+  document.getElementById("dias").textContent = S.diamonds;
+  document.getElementById("secretRolls").textContent = S.secretRolls.toLocaleString();
+  saveGame();
+  renderIndex();
+  renderSecrets();
+  renderShop();
+  var autoBtn = document.getElementById("auto");
+  if(!S.autoRoll){
+    autoBtn.textContent = "AUTO ROLL";
+    autoBtn.className = "";
+    autoBtn.disabled = true;
+  } else {
+    autoBtn.disabled = false;
+    autoBtn.textContent = S.autoOn ? "AUTO: ON" : "AUTO: OFF";
+    autoBtn.className = S.autoOn ? "on" : "";
+  }
+}
+
+/* ---------------- events ---------------- */
+document.getElementById("roll").addEventListener("click", doRoll);
+document.getElementById("exportSave").addEventListener("click", exportSave);
+document.getElementById("importSave").addEventListener("click", function(){
+  document.getElementById("saveFileInput").click();
+});
+document.getElementById("saveFileInput").addEventListener("change", function(){
+  importSaveFile(this.files && this.files[0]);
+  this.value = "";
+});
+
+document.getElementById("auto").addEventListener("click", function(){
+  if(!S.autoRoll) return;
+  S.autoOn = !S.autoOn;
+  if(S.autoOn){
+    if(!S.rolling) doRoll();
+  } else {
+    clearTimeout(S.autoTimer);
+  }
+  refreshAll();
+});
+
+var tabs = document.querySelectorAll(".tab");
+for(var i=0;i<tabs.length;i++){
+  tabs[i].addEventListener("click", function(){
+    for(var j=0;j<tabs.length;j++) tabs[j].classList.remove("active");
+    this.classList.add("active");
+    var name = this.getAttribute("data-tab");
+    document.getElementById("panelIndex").classList.toggle("hidden", name !== "index");
+    document.getElementById("panelSecrets").classList.toggle("hidden", name !== "secrets");
+    document.getElementById("panelShop").classList.toggle("hidden", name !== "shop");
+  });
+}
+
+window.addEventListener("resize", function(){
+  renderIndex();
+  renderSecrets();
+  for(var i=0;i<chainEls.length;i++) drawSigil(chainEls[i].canvas, chainEls[i].tier, {locked: chainEls[i].tier===0});
+});
+
+/* ---------------- boot ---------------- */
+loadGame();
+buildChains();
+refreshAll();
+if(!saveBlocked) saveGame();
+})();
+</script>
+</body>
+</html>
